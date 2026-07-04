@@ -183,11 +183,7 @@ function renderV1(step){
   function extract(msg){
     const lower=msg.toLowerCase();
     for(const c of Object.keys(CITY_DB)) if(lower.includes(c)) return {city:c,real:true};
-    const num=msg.match(/\d+/);
-    if(num) return {city:num[0],real:false};
-    const words=msg.replace(/[^a-zA-Z ]/g,' ').trim().split(/\s+/).filter(w=>w.length>2);
-    const pick=words.length?words[words.length-1]:'unknown';
-    return {city:pick.charAt(0).toUpperCase()+pick.slice(1),real:false};
+    return {city:null,real:false};
   }
   function set(i,html,cls){ const st=stages[i]; st.classList.remove('err','okk'); if(cls)st.classList.add(cls); st.classList.add('active'); $('.out',st).innerHTML=html; }
   function run(msg){
@@ -198,14 +194,15 @@ function renderV1(step){
     const ex=extract(msg);
     const at=(d,f)=>setTimeout(()=>{ if(tk===token)f(); },d);
     at(50,()=>set(0,'“'+esc(msg)+'”'));
-    at(600,()=>set(1,'city: "'+esc(ex.city)+'"',ex.real?null:'err'));
     if(ex.real){
+      at(600,()=>set(1,'city: "'+esc(ex.city)+'"'));
       at(1200,()=>set(2,'<span class="good">200 · '+CITY_DB[ex.city]+'</span>','okk'));
       at(1800,()=>{ set(3,'<span class="good">“'+CITY_DB[ex.city]+' in '+esc(ex.city)+'.”</span>','okk');
         note.className='sim-note good show'; note.textContent='Right — by luck. Try the others.'; });
     } else {
-      at(1200,()=>set(2,'<span class="bad">404 · not found</span>','err'));
-      at(1800,()=>{ set(3,'<span class="bad">“No weather for ‘'+esc(ex.city)+'’.”</span>','err');
+      at(600,()=>set(1,'<span class="bad">✗ error: no city in message</span>','err'));
+      at(1200,()=>set(2,'<span class="bad">400 · q is empty</span>','err'));
+      at(1800,()=>{ set(3,'<span class="bad">“Something broke. Try again.”</span>','err');
         note.className='sim-note bad show'; note.textContent='Nothing asked whether a tool was needed.'; });
     }
   }
@@ -291,6 +288,9 @@ function renderBuilder(step){
   }
   [name,desc].forEach(x=>x.addEventListener('input',lintAll));
   [city,req].forEach(x=>x.addEventListener('change',lintAll));
+  name.value='get_weather';
+  desc.value='Get the current weather for one city. Use when the user asks about weather, temperature, or conditions anywhere. One city per call — the one the user wants answered.';
+  city.checked=true; req.checked=true;
   lintAll();
   return node;
 }
@@ -370,7 +370,8 @@ function renderTags(step){
   let done=0,right=0;
   TAG_EVENTS.forEach(e=>{
     const row=el(`<div class="game-row"><span class="msg" style="font-family:var(--font-mono);font-size:13px">${esc(e.evt)}</span>
-      <span class="pair"><button class="pick p-llm" data-a="llm">LLM</button><button class="pick p-exec" data-a="exec">Backend</button></span></div>`);
+      <span class="pair"><button class="pick p-llm" data-a="llm">LLM</button><button class="pick p-exec" data-a="exec">Backend</button></span>
+      <span class="why">${esc(e.why)}</span></div>`);
     $$('.pick',row).forEach(p=>p.onclick=()=>{
       row.classList.add('done');
       const ok=p.dataset.a===e.ans;
@@ -403,22 +404,21 @@ function renderRamble(step){
       con.appendChild(el(`<div class="ln ${l[0]}">${l[1]}</div>`)); con.scrollTop=con.scrollHeight; },400*i));
   }
   $('#rRun',node).onclick=()=>{
-    const kind=['ok','wrong','invent'][rambleSeq%3]; rambleSeq++;
+    const kind=['all','first','last'][rambleSeq%3]; rambleSeq++;
     const tk=++token; runs++;
     let L=[['sys','▶ run #'+runs]];
-    if(kind==='ok'){ ok++;
-      L.push(['llm','intent → { "city": "Bengaluru" }']);
+    if(kind==='all'){ bad++;
+      L.push(['warn','intent → { "city": ["Delhi","Chennai","Mumbai","Bengaluru"] }   ← grabbed all four']);
+      L.push(['err','schema says city: string. got an array. 💥 crash before the API.']);
+    } else if(kind==='first'){ bad++;
+      L.push(['warn','intent → { "city": "Delhi" }   ← first city it saw']);
+      L.push(['exec','GET /weather?q=Delhi … 200   (the API can’t know)']);
+      L.push(['err','"41°C and hazy in Delhi!"  — fluent, confident, wrong city']);
+    } else { ok++;
+      L.push(['llm','intent → { "city": "Bengaluru" }   ← the last one. the one actually asked about']);
       L.push(['exec','GET /weather?q=Bengaluru … 200']);
       L.push(['good','"Around 23°C tomorrow."  ✓']);
-      L.push(['sys','feeling safe? run it again.']);
-    } else if(kind==='wrong'){ bad++;
-      L.push(['warn','intent → { "city": "Chennai" }   ← wrong city']);
-      L.push(['exec','GET /weather?q=Chennai … 200   (the API can’t know)']);
-      L.push(['err','"A hot 34°C in Chennai!"  — fluent, confident, wrong']);
-    } else { bad++;
-      L.push(['warn','intent → { "city": "my cousin" }   ← invented']);
-      L.push(['err','GET /weather?q=my%20cousin … 404']);
-      L.push(['err','crash or apologize. user loses either way.']);
+      L.push(['sys','1 in 3. feeling lucky?']);
     }
     lines(L,tk);
     setTimeout(()=>{ if(tk===token){ $('#tr',node).textContent=runs; $('#to',node).textContent=ok; $('#tb',node).textContent=bad; } },400*L.length);
@@ -453,25 +453,26 @@ function renderFixit(step){
     if(!ups.validate&&!ups.loop&&!ups.menu){
       L=[['sys','▶ zero upgrades on.'],['err','same coin-flip. you own the backend — use it.']];
     } else if(ups.menu&&!ups.validate&&!ups.loop){
-      L=[['sys','▶ tightened menu…'],['llm','intent → { "city": "Bengaluru" }  ✓'],
-         ['warn','…run it 100× and the bad one still shows up.'],
+      L=[['sys','▶ tightened menu: "one city per call — the one the user wants answered"…'],
+         ['llm','intent → { "city": "Bengaluru" }  ✓'],
+         ['warn','…run it 100× and the array or the wrong city still shows up.'],
          ['sys','prompting lowers the rate. it can’t make it deterministic.']];
     } else if(ups.validate&&!ups.loop){
-      L=[['sys','▶ validation on…'],['llm','intent → { "city": "my cousin" }'],
-         ['exec','VALIDATE → not a resolvable city'],
-         ['good','✓ rejected before execution.'],
+      L=[['sys','▶ validation on…'],['llm','intent → { "city": ["Delhi","Chennai","Mumbai","Bengaluru"] }'],
+         ['exec','VALIDATE → expected one string, got four cities'],
+         ['good','✓ rejected before execution. no crash.'],
          ['warn','…and now what? the user still has no answer.'],
          ['sys','something has to flow back. one switch left.']];
     } else if(ups.loop&&!ups.validate){
-      L=[['sys','▶ loop without a verifier…'],['llm','intent → { "city": "Chennai" }   ← nothing checks it'],
-         ['exec','GET /weather?q=Chennai … 200'],
-         ['err','no verifier → no error → nothing to feed back.']];
+      L=[['sys','▶ loop without a verifier…'],['llm','intent → { "city": "Delhi" }   ← nothing checks it'],
+         ['exec','GET /weather?q=Delhi … 200'],
+         ['err','wrong city, clean 200. no error → nothing to feed back.']];
     } else {
-      L=[['sys','▶ validation + loop…'],['llm','intent → { "city": "my cousin" }'],
-         ['exec','VALIDATE → fail: not a city'],
-         ['warn','↩ tool message: "not found; re-extract or ask"'],
+      L=[['sys','▶ validation + loop…'],['llm','intent → { "city": ["Delhi","Chennai","Mumbai","Bengaluru"] }'],
+         ['exec','VALIDATE → fail: expected one string, got four'],
+         ['warn','↩ tool message: "one city only — which one is the user asking about?"'],
          ['llm','retry → { "city": "Bengaluru" }'],
-         ['exec','VALIDATE ✓ · GET /weather … 200'],
+         ['exec','VALIDATE ✓ · GET /weather?q=Bengaluru … 200'],
          ['good','"Around 23°C tomorrow."'],
          ['good','✓ caught and corrected in one cycle.']];
     }

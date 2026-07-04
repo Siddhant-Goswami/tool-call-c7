@@ -172,6 +172,8 @@ pre.codeblk .k{ color:#9EC5FF; }
 
 /* ---------------- tool builder ---------------- */
 .builder{ display:grid; grid-template-columns:1fr 1fr; gap:var(--space-5); }
+.builder > div{ min-width:0; }
+.builder pre.codeblk{ white-space:pre-wrap; word-break:break-word; margin-top:0; }
 .builder .label{ margin-top:var(--space-4); }
 .lint{ font-size:var(--fs-caption); font-family:var(--font-mono); margin-top:5px; min-height:16px; }
 .lint.bad{ color:var(--error); }

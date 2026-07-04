@@ -192,11 +192,11 @@ const LOOP_STEPS = [
 ];
 
 const TAG_EVENTS = [
-  { evt:'chose get_weather over answering', ans:'llm' },
-  { evt:'parsed {"city": "Bengaluru"}', ans:'exec' },
-  { evt:'HTTP GET openweathermap.org', ans:'exec' },
-  { evt:'checked args against the schema', ans:'exec' },
-  { evt:'wrote “It’s 23°C in Bengaluru.”', ans:'llm' },
+  { evt:'chose get_weather over answering', ans:'llm', why:'Deciding is pass 1 — the model’s only job besides speaking.' },
+  { evt:'parsed {"city": "Bengaluru"}', ans:'exec', why:'The model emitted text. Turning it into data is code.' },
+  { evt:'HTTP GET openweathermap.org', ans:'exec', why:'The backend owns the network. The model never touches it.' },
+  { evt:'checked args against the schema', ans:'exec', why:'Verification lives at the boundary you control.' },
+  { evt:'wrote “It’s 23°C in Bengaluru.”', ans:'llm', why:'Pass 2 — the voice, grounded in the tool result.' },
 ];
 
 const RAMBLE_MSG = 'so my flight got moved AGAIN, i was in <b>Delhi</b> last week, my cousin in <b>Chennai</b> keeps saying visit, maybe <b>Mumbai</b> for the wedding — anyway: will it be hot in <b>Bengaluru</b> tomorrow??';
