@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L14 · Deriving the Protocol — From Tool Call to MCP</title>
+<meta name="description" content="Interactive Socratic lecture: every crack in the v1 tool-call interface becomes a question, a felt failure, an exercise, and a derived fix — until the class invents MCP.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ================= TOP BAR ================= -->
+  <div class="topbar">
+    <button class="menu-btn" id="menuBtn">☰</button>
+    <div class="brand">100x<span>ENGINEERS</span></div>
+    <div class="lecture-title">L14 · Deriving the Protocol — From Tool Call to MCP · Cohort 7 · LLM Deep Dive, Part 2</div>
+    <div class="clockchip" id="sectionClock">6:00 – 6:12 IST</div>
+    <div class="stopwatch">
+      <button id="swToggle" title="Session stopwatch">▶ 00:00</button>
+      <button id="swReset" class="reset" title="Reset stopwatch">↺</button>
+    </div>
+  </div>
+
+  <!-- ================= NAV ================= -->
+  <nav class="nav" id="nav">
+    <h2>Run of Show · 04 Jul · 6–8 PM IST</h2>
+    <div id="navList"></div>
+    <div class="nav-foot">
+      Navigate with <kbd>←</kbd> <kbd>→</kbd> · Reveals stay locked until the room has answered. Derive before name, all the way down.
+    </div>
+  </nav>
+
+  <!-- ================= MAIN ================= -->
+  <main class="main" id="main">
+
+  <!-- ============================================================
+       SECTION 0 · OPENING
+       ============================================================ -->
+  <section class="slide" data-title="Opening — the cracks drive the agenda" data-clock="6:00 – 6:12 IST" data-num="01">
+    <div class="kicker">Segment 01 · 6:00–6:12 · Interactive · never cut</div>
+    <h1>The Cracks Drive the Agenda</h1>
+    <p class="lede">Yesterday you invented the tool call — and we deliberately left it broken. Today the session runs on <strong>your homework, not my slides</strong>: each failure you documented forces one upgrade to the architecture.</p>
+
+    <div class="block q-block">
+      <span class="block-tag">❓ The Question</span>
+      <p class="bigq">Who actually did the practice set — and specifically: <em>who wrote down ways the v1 interface can fail?</em></p>
+      <p class="q-sub">Raise of hands per item. Then we harvest 5–8 cracks live, in your words, with credit by name. This list is the agenda.</p>
+    </div>
+
+    <div class="block feel-block">
+      <span class="block-tag">🧱 The Crack Board</span>
+      <h3>Harvest the cracks — number them, they become the session</h3>
+      <div class="harvest">
+        <div class="harvest-board">
+          <h4>v1 cracks · in the students' words</h4>
+          <ul class="crack-list" id="crackList"></ul>
+          <div class="crack-empty" id="crackEmpty">Board is empty. Harvest from the room →</div>
+          <div class="harvest-form">
+            <input type="text" id="crackInput" placeholder="Type a crack from the room…">
+            <input type="text" id="crackName" class="name-inp" placeholder="Credit (name)">
+            <button class="btn primary" id="crackAdd">Add</button>
+          </div>
+        </div>
+        <div class="harvest-side">
+          <h4 style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;margin-bottom:10px">Expected (from L13 chat + §13 table) — click to add</h4>
+          <div class="chips" id="crackChips"></div>
+        </div>
+      </div>
+      <details class="speaker">
+        <summary>Speaker note</summary>
+        <div class="note-body"><strong>Do not fix anything yet.</strong> The whole session is: pick a crack, feel the pain live, derive the fix, name it. Say that out loud so the agenda is transparent. Credit-by-name reinforcement worked with Jaskaran and Jonala yesterday — keep doing it.</div>
+      </details>
+    </div>
+
+    <div class="callout lime">
+      <span class="co-tag">Frame to say out loud</span>
+      “Yesterday you invented the tool call. Today you are going to invent the thing you all kept trying to name before we earned it. <b>By 8 PM you will have designed it yourselves</b>, and then I will tell you what the industry calls it.”
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 1 · CRACK 1: THE MISSING "WHEN" LAYER
+       ============================================================ -->
+  <section class="slide" data-title="Crack 1 — the missing “when” layer" data-clock="6:12 – 6:35 IST" data-num="02">
+    <div class="kicker">Segment 02 · 6:12–6:35 · Whiteboard + Socratic · the spine — never cut</div>
+    <h1>Crack 1 — The Missing “When” Layer</h1>
+    <p class="lede">Jonala caught it: in v1 the LLM is a <strong>pure extraction proxy</strong>. Every message gets shoved through the weather workflow — even “good morning.” Nothing decides <em>whether</em> a tool call is needed at all.</p>
+
+    <div class="block q-block">
+      <span class="block-tag">❓ Ask the room</span>
+      <p class="bigq">You run a company front desk with <em>one receptionist and 40 departments</em>. The receptionist can't possibly know every department's work. How do you make sure a walk-in visitor is either answered directly or routed to the right department?</p>
+      <p class="q-sub">Let the room build the answer. Target landing zone: a <strong>directory</strong> — each department's name, a one-line description of what it handles, what info it needs — and a structured <strong>routing slip</strong>.</p>
+    </div>
+
+    <div class="block feel-block">
+      <span class="block-tag">🔥 Feel it — the v1 pipeline, live</span>
+      <h3>v1 has no “whether.” Watch it try to extract a city from arithmetic.</h3>
+      <p>This is yesterday's flow, exactly as built: <em>every</em> message goes to the LLM with one job — extract a city — then straight to OpenWeatherMap. Run the presets. Feel the absurdity.</p>
+      <div class="sim">
+        <div class="preset-row">
+          <button class="btn" data-v1="good morning ☀️">“good morning ☀️”</button>
+          <button class="btn" data-v1="what is 2 + 2?">“what is 2 + 2?”</button>
+          <button class="btn" data-v1="what's the weather in Bengaluru?">“what's the weather in Bengaluru?”</button>
+        </div>
+        <div class="sim-input-row">
+          <input type="text" id="v1Input" placeholder="…or type anything at all — v1 doesn't care">
+          <button class="btn primary" id="v1Run">Run v1</button>
+        </div>
+        <div class="pipeline">
+          <div class="stage" id="v1s0"><h5>User message</h5><div class="out"></div></div>
+          <div class="stage" id="v1s1"><h5>LLM <span class="layer-pill prob">probabilistic</span></h5><div class="out"></div></div>
+          <div class="stage" id="v1s2"><h5>OpenWeatherMap <span class="layer-pill det">deterministic</span></h5><div class="out"></div></div>
+          <div class="stage" id="v1s3"><h5>Reply to user</h5><div class="out"></div></div>
+        </div>
+        <div class="sim-verdict" id="v1Verdict"></div>
+      </div>
+    </div>
+
+    <div class="block ex-block">
+      <span class="block-tag">🔧 Exercise A — be the receptionist</span>
+      <h3>For each walk-in: answer directly, or fill a routing slip?</h3>
+      <p>The routing decision is the missing layer. Make it by hand first — then we'll make the model make it.</p>
+      <div id="deskGame"></div>
+      <div class="score-line" id="deskScore"></div>
+    </div>
+
+    <div class="block ex-block">
+      <span class="block-tag">🔧 Exercise B — write the directory entry</span>
+      <h3>Define <code class="inline">get_weather</code> so a receptionist who has never seen it knows when to route to it</h3>
+      <p>Three things per entry, exactly like the department directory: a dispatchable <strong>name</strong>, a <strong>description</strong> that answers “when is this the right choice?”, and an <strong>input schema</strong> — the contract.</p>
+      <div class="builder">
+        <div class="fields">
+          <label>Name — stable identifier the execution environment dispatches on</label>
+          <input type="text" id="tbName" placeholder='e.g. NOT “the weather thing”' autocomplete="off">
+          <div class="lint" id="tbNameLint"></div>
+          <label>Description — the routing intelligence</label>
+          <textarea id="tbDesc" rows="3" placeholder="Tell the model WHEN this tool is the right choice…"></textarea>
+          <div class="lint" id="tbDescLint"></div>
+          <label>Input schema</label>
+          <div class="checkrow"><input type="checkbox" id="tbCity"> <span><code class="inline">city: string</code> — declared</span></div>
+          <div class="checkrow"><input type="checkbox" id="tbReq"> <span><code class="inline">required: ["city"]</code> — enforced, not optional</span></div>
+          <div class="lint" id="tbSchemaLint"></div>
+        </div>
+        <div>
+          <label style="display:block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:12px 0 5px">Live preview — the menu entry</label>
+          <pre class="code" id="tbPreview"></pre>
+          <div class="builder-verdict" id="tbVerdict">Waiting… would <em>your</em> receptionist know when to route to this?</div>
+        </div>
+      </div>
+      <div class="callout">
+        <span class="co-tag">Checkpoint</span>
+        Three students each define one tool from <b>their own workflow diagnosis</b> in name / description / schema format, in chat. Read them out. Weak descriptions get workshopped live: <b>“would your receptionist know when to route to this?”</b>
+      </div>
+    </div>
+
+    <div class="block reveal-block">
+      <span class="block-tag">💡 The Reveal</span>
+      <button class="gate">🔒 Reveal — only after the room has designed the directory</button>
+      <div class="reveal-body hidden">
+        <h3>The directory is a tool menu. The routing slip is a structured intent.</h3>
+        <p>What the LLM needs, delivered through the system prompt, is a <strong>menu of tools</strong> — and one new instruction that upgrades it from extractor to <strong>decision maker</strong>:</p>
+        <div class="callout violet">
+          <span class="co-tag">The new instruction</span>
+          “Either answer the user directly, <b>or</b>, if a tool is needed, output a structured call in exactly this JSON shape: <code class="inline">{ name, arguments }</code>. Nothing else.”
+        </div>
+        <pre class="code"><span class="c"># The tool menu (lives in the system prompt / API tools param)</span>
+{
+  <span class="s">"name"</span>: <span class="s">"get_weather"</span>,
+  <span class="s">"description"</span>: <span class="s">"Get current weather for a city.
+                  Use when the user asks about weather,
+                  temperature, or conditions anywhere."</span>,
+  <span class="s">"parameters"</span>: {
+    <span class="s">"type"</span>: <span class="s">"object"</span>,
+    <span class="s">"properties"</span>: { <span class="s">"city"</span>: { <span class="s">"type"</span>: <span class="s">"string"</span> } },
+    <span class="s">"required"</span>: [<span class="s">"city"</span>]
+  }
+}
+
+<span class="c"># What the LLM now emits — an intent, NOT an action</span>
+{ <span class="s">"name"</span>: <span class="s">"get_weather"</span>, <span class="s">"arguments"</span>: { <span class="s">"city"</span>: <span class="s">"Bengaluru"</span> } }</pre>
+        <p><strong>The LLM never executes anything.</strong> It emits an intent; the execution environment reads the intent, runs the code, and owns everything that actually happens. Yesterday's division of labor survives intact: <span class="layer-pill prob">probabilistic decides &amp; speaks</span> · <span class="layer-pill det">deterministic acts &amp; verifies</span>.</p>
+        <div class="callout lime">
+          <span class="co-tag">Now — and only now — the name</span>
+          This exact pattern — a tool menu plus a structured call emitted by the model — is what every provider ships natively as <b>function calling</b> (or <b>tool use</b>). OpenAI, Anthropic, Groq: the <code class="inline">tools</code> parameter in their APIs <i>is</i> this JSON menu, standardized. You didn't learn a feature. You re-derived why the feature has the shape it has.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 2 · LIVE BUILD: TWO-PASS LOOP
+       ============================================================ -->
+  <section class="slide" data-title="Live build — the two-pass loop" data-clock="6:35 – 6:55 IST" data-num="03">
+    <div class="kicker">Segment 03 · 6:35–6:55 · Live build on Groq Cloud · fallback: pre-recorded capture</div>
+    <h1>Live Build — The Two-Pass Loop</h1>
+    <p class="lede">Function calling end to end, in the same backend stack from the full-stack module. No framework, no abstraction, under 30 lines visible at once. The moment it looks like magic, the Uber problem is back.</p>
+
+    <div class="block q-block">
+      <span class="block-tag">❓ The Question</span>
+      <p class="bigq">When the model “calls the weather API”… <em>who actually touches the internet?</em> And how many times does the LLM?</p>
+      <p class="q-sub">Hold your answer. Step through the loop first — and keep one eye on which layer lights up.</p>
+    </div>
+
+    <div class="block feel-block">
+      <span class="block-tag">🔥 Step through it — narrated against the three layers</span>
+      <div class="layers" id="loopLayers">
+        <div class="layerbox l1"><span class="lnum">L1</span><span class="lname">LLM</span><span class="layer-pill prob">probabilistic</span><span class="ldesc">decides &amp; speaks — never executes</span></div>
+        <div class="layerbox l2"><span class="lnum">L2</span><span class="lname">Execution environment</span><span class="layer-pill det">deterministic</span><span class="ldesc">parses intent, runs code, verifies</span></div>
+        <div class="layerbox l3"><span class="lnum">L3</span><span class="lname">External world</span><span class="layer-pill world">APIs</span><span class="ldesc">OpenWeatherMap, Gmail, Supabase…</span></div>
+      </div>
+      <div class="stepper">
+        <div class="step-tabs" id="loopTabs"></div>
+        <div class="step-panel">
+          <pre class="code" id="loopCode"></pre>
+          <div class="step-note" id="loopNote"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="loopPrev">← Back</button>
+          <button class="btn primary" id="loopNext">Next step →</button>
+        </div>
+      </div>
+      <details class="speaker">
+        <summary>Speaker note</summary>
+        <div class="note-body">Keep the code deliberately boring. If Groq rate-limits during the demo, fall back to the Hugging Face Space with manual JSON pasting — that's yesterday's flow and it still proves the point.</div>
+      </details>
+    </div>
+
+    <div class="block ex-block">
+      <span class="block-tag">🔧 Exercise — the checkpoint poll</span>
+      <h3>In this loop, how many times did the LLM touch the internet?</h3>
+      <div class="poll" id="netPoll">
+        <button class="opt" data-val="0">0</button>
+        <button class="opt" data-val="1">1</button>
+        <button class="opt" data-val="2">2</button>
+        <button class="opt" data-val="3">once per pass</button>
+      </div>
+      <div class="poll-explain" id="netPollWhy"><strong>Zero.</strong> The model returned a JSON intent both times it ran. The one HTTP call to OpenWeatherMap came from the execution environment — layer 2. Every student must be able to say which layer executed the HTTP call before we move on.</div>
+      <h3 style="margin-top:22px">Tag each event with the layer that did it</h3>
+      <div id="tagQuiz"></div>
+      <div class="score-line" id="tagScore"></div>
+    </div>
+
+    <div class="block reveal-block">
+      <span class="block-tag">💡 The Reveal</span>
+      <button class="gate">🔒 Reveal — after the poll settles</button>
+      <div class="reveal-body hidden">
+        <h3>The whole build, honestly boring</h3>
+        <pre class="code"><span class="c"># Pass 1: model decides</span>
+resp = client.chat.completions.create(
+    model=MODEL,
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: user_msg}],
+    tools=[GET_WEATHER_TOOL],   <span class="c"># the menu from Segment 02</span>
+)
+call = resp.choices[0].message.tool_calls[0]   <span class="c"># intent, not action</span>
+
+<span class="c"># Execution: deterministic side acts — the LLM is not involved</span>
+args = json.loads(call.function.arguments)
+weather = fetch_openweathermap(args[<span class="s">"city"</span>])   <span class="c"># our L13 automation</span>
+
+<span class="c"># Pass 2: model speaks, grounded</span>
+messages += [resp.choices[0].message,
+             {<span class="s">"role"</span>: <span class="s">"tool"</span>, <span class="s">"tool_call_id"</span>: call.id,
+              <span class="s">"content"</span>: json.dumps(weather)}]
+final = client.chat.completions.create(model=MODEL, messages=messages)</pre>
+        <p><strong>The control test:</strong> ask “what is 2 + 2?” through the same code. The model answers directly — no tool call. The “when” layer exists.</p>
+        <div class="stamp">✔ CRACK 1 — CLOSED, LIVE</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 3 · CRACKS 2+3: CONTRACTS, VALIDATION, FIRST LOOP
+       ============================================================ -->
+  <section class="slide" data-title="Cracks 2+3 — contracts, validation, the first loop" data-clock="6:55 – 7:15 IST" data-num="04">
+    <div class="kicker">Segment 04 · 6:55–7:15 · Provoke + fix live · trim the provocation reruns if behind</div>
+    <h1>Cracks 2 &amp; 3 — Hallucinated Arguments, Garbage In</h1>
+    <p class="lede">Yesterday's estimate holds: roughly <strong>90% right — and the 10% is fatal</strong> if unhandled, because the deterministic side amplifies garbage-in into garbage-out.</p>
+
+    <div class="block q-block">
+      <span class="block-tag">❓ Ask the room</span>
+      <p class="bigq">You cannot retrain the model — the weights are frozen. You cannot control how users type. <em>Where in the three layers is the one place you fully control</em> — and what do you already know how to do there?</p>
+      <p class="q-sub">Target landing zone: the execution environment — and what we do to deterministic software is <strong>verify</strong> it. The Verifier's Rule applies at the boundary.</p>
+    </div>
+
+    <div class="block feel-block">
+      <span class="block-tag">🔥 Provoke the failure on purpose</span>
+      <h3>The rambling voice-mode message. Run it three times.</h3>
+      <div class="callout" style="font-style:italic">
+        “so my flight got moved AGAIN, i was in <b>Delhi</b> last week and my cousin in <b>Chennai</b> keeps saying come visit, maybe <b>Mumbai</b> for the wedding — anyway what i actually need: is it going to be hot in <b>Bengaluru</b> tomorrow??”
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="rambleRun">▶ Run it through v1.5</button>
+        <button class="btn ghost" id="rambleReset">clear</button>
+      </div>
+      <div class="console" id="rambleConsole"><div class="ln sys">— console idle. one correct answer proves nothing; run it again. —</div></div>
+      <div class="tally">
+        <span>runs <b id="tRuns">0</b></span>
+        <span class="t-ok">correct <b id="tOk">0</b></span>
+        <span class="t-bad">garbage out <b id="tBad">0</b></span>
+      </div>
+    </div>
+
+    <div class="block ex-block">
+      <span class="block-tag">🔧 Exercise — fix it where you have control</span>
+      <h3>First: which layer gets the fix?</h3>
+      <div class="poll" id="layerPoll">
+        <button class="opt" data-val="l1">L1 — the LLM</button>
+        <button class="opt" data-val="l2">L2 — execution env</button>
+        <button class="opt" data-val="l3">L3 — the APIs</button>
+      </div>
+      <div class="poll-explain" id="layerPollWhy"><strong>Layer 2 — the execution environment.</strong> The weights are frozen and the users are users. The boundary you own is where the intent arrives — verify it <em>before</em> executing it. The schema from Segment 02 was the contract all along.</div>
+
+      <h3 style="margin-top:22px">Then: switch on the upgrades and re-run the rambling prompt</h3>
+      <div class="upgrades">
+        <label class="upgrade" id="upValidate"><input type="checkbox" data-up="validate">
+          <span><span class="u-name">1 · Validate the contract</span><br><span class="u-desc">Before executing: right types, required fields present, city resolvable by the geocoding API. Reject what fails. Ordinary input validation.</span></span></label>
+        <label class="upgrade" id="upMenu"><input type="checkbox" data-up="menu">
+          <span><span class="u-name">2 · Tighten the menu</span><br><span class="u-desc">Enums for constrained values, examples in descriptions, one tool does one thing. Writing tool descriptions is context engineering.</span></span></label>
+        <label class="upgrade" id="upLoop"><input type="checkbox" data-up="loop">
+          <span><span class="u-name">3 · Close the loop</span><br><span class="u-desc">On validation failure: don't crash, don't silently guess. Send the error back to the model as a tool message. The model retries with better arguments.</span></span></label>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="fixedRun">▶ Re-run the rambling prompt with upgrades</button>
+      </div>
+      <div class="console" id="fixedConsole"><div class="ln sys">— switch on your upgrades, then re-run —</div></div>
+    </div>
+
+    <div class="block reveal-block">
+      <span class="block-tag">💡 The Reveal</span>
+      <button class="gate">🔒 Reveal — after the room has drawn the arrow back</button>
+      <div class="reveal-body hidden">
+        <h3>The arrow that used to flow one way now cycles</h3>
+        <div class="loop-diagram">
+          <span class="loop-node n1">model proposes</span><span class="loop-arrow">→</span>
+          <span class="loop-node n2">environment executes + verifies</span><span class="loop-arrow">→</span>
+          <span class="loop-node n2">result · or error</span><span class="loop-arrow">→</span>
+          <span class="loop-node n1">model adjusts</span>
+          <span class="loop-back">↺ repeat until done</span>
+        </div>
+        <p>Validation failures become <strong>tool messages</strong>: <code class="inline">city 'my cousin' not found; ask the user or re-extract</code>. The model retries with better arguments. The wrong extraction gets caught and corrected in one cycle, on screen.</p>
+        <div class="callout violet">
+          <span class="co-tag">Plant the seed — do not name it</span>
+          The cycle the class just drew — <b>propose → execute + verify → feed back → adjust → repeat</b> — is the primitive the entire agents module is built from. Say only: <b>“hold onto this loop; in a few weeks you will see it is the whole story.”</b>
+        </div>
+        <div class="stamp">✔ CRACKS 2 &amp; 3 — CLOSED</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 4 · CRACK 4: SCALE WALL → STANDARD
+       ============================================================ -->
+  <section class="slide" data-title="Crack 4 — the scale wall → deriving the standard" data-clock="7:15 – 7:35 IST" data-num="05">
+    <div class="kicker">Segment 05 · 7:15–7:35 · Whiteboard + Socratic · the payoff — never cut</div>
+    <h1>Crack 4 — The Scale Wall</h1>
+    <p class="lede">Zoom out from one weather tool. Your workflow diagnoses need Gmail, LinkedIn, Instagram, Supabase, internal wikis. And the world has more than one model: GPT-OSS today, Claude tomorrow, a local Llama for the client who can't send data out.</p>
+
+    <div class="block q-block">
+      <span class="block-tag">❓ Ask the room</span>
+      <p class="bigq">If every tool needs custom glue for every model or app, <em>how many integrations does the grid cost?</em> And where have you seen this exact problem shape before — outside of AI?</p>
+      <p class="q-sub">Target landing zone: M × N, rebuilt by every team on Earth. Prior art the class already knows: USB. HTTP. The answer to an M × N explosion is always <strong>a standard in the middle</strong>.</p>
+    </div>
+
+    <div class="block feel-block">
+      <span class="block-tag">🔥 Feel it — draw the grid</span>
+      <h3>M tools × N models. Drag the sliders. Watch the glue explode.</h3>
+      <div class="mxn-controls">
+        <div class="ctl">tools (M) <input type="range" id="mSlider" min="2" max="12" value="8"> <span class="val" id="mVal">8</span></div>
+        <div class="ctl">models / hosts (N) <input type="range" id="nSlider" min="2" max="8" value="6"> <span class="val" id="nVal">6</span></div>
+        <label class="switch"><input type="checkbox" id="stdToggle"> insert a standard in the middle</label>
+      </div>
+      <div class="mxn-count" id="mxnCount"></div>
+      <div class="mxn-svg-wrap"><svg id="mxnSvg" width="640" height="420" viewBox="0 0 640 420"></svg></div>
+      <div class="prior-art">
+        <div class="prior-card"><h5>🔌 USB</h5><p>Before: every peripheral shipped its own port and driver per machine. After: one plug shape, any device into any computer. M + N.</p></div>
+        <div class="prior-card"><h5>🌐 HTTP</h5><p>Any browser talks to any server — because both speak one grammar. Nobody writes Chrome-specific web servers. M + N.</p></div>
+      </div>
+    </div>
+
+    <div class="block ex-block">
+      <span class="block-tag">🔧 Exercise — design the standard, as a class</span>
+      <h3>Nobody says the acronym yet. Specify what the interface must do.</h3>
+      <p>Select the requirements the standard genuinely needs — then grade the spec.</p>
+      <div id="specList"></div>
+      <div class="btn-row"><button class="btn primary" id="specGrade">Grade our spec</button></div>
+      <div class="score-line" id="specScore"></div>
+    </div>
+
+    <div class="block reveal-block">
+      <span class="block-tag">💡 The Reveal</span>
+      <button class="gate">🔒 Reveal — only after the class has written the spec</button>
+      <div class="reveal-body hidden">
+        <div class="callout lime">
+          <span class="co-tag">Say these exact words</span>
+          “You have just designed a protocol for giving models context. The industry shipped this in late 2024 and called it the <b>Model Context Protocol. MCP.</b> Everything you have been calling MCP for two days, you have now built the reasoning for.”
+        </div>
+        <table class="mapping">
+          <thead><tr><th>Their whiteboard</th><th>MCP name</th><th>What it is</th></tr></thead>
+          <tbody>
+            <tr><td>The app hosting the model (Claude desktop, our chat UI)</td><td class="mcp-name">Host</td><td>Where the user and the LLM live; runs one client per connection</td></tr>
+            <tr><td>The glue speaking the standard on the model's side</td><td class="mcp-name">Client</td><td>Maintains the connection, forwards discovery and invocation</td></tr>
+            <tr><td>Our execution environment, exposed through the standard</td><td class="mcp-name">Server</td><td>Wraps tools, resources, and prompts behind the shared grammar</td></tr>
+            <tr><td>The menu + the two-pass loop</td><td class="mcp-name">Tools (list / call)</td><td>Discovery and invocation, exactly as derived in Segments 02–03</td></tr>
+          </tbody>
+        </table>
+        <div class="callout violet">
+          <span class="co-tag">The sentence that lands two days of work</span>
+          <b>An MCP server is yesterday's execution environment wearing a standard uniform.</b> Nothing about the three layers changed; the middle layer just learned to describe itself so any host can plug in. Connectors in Claude are hosts speaking this grammar to servers like the ones you will now build.
+        </div>
+        <div class="stamp">✔ CRACK 4 — CLOSED · PROTOCOL DERIVED</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 5 · CONVERGENCE
+       ============================================================ -->
+  <section class="slide" data-title="Live build — both paths converge" data-clock="7:35 – 7:50 IST" data-num="06">
+    <div class="kicker">Segment 06 · 7:35–7:50 · Live build ×2 · if behind: one live, narrate the other</div>
+    <h1>Both Paths Converge</h1>
+    <p class="lede">No-code and code arrive at the same diagram. Same three layers, two stacks, one grammar.</p>
+
+    <div class="block q-block">
+      <span class="block-tag">❓ The Question</span>
+      <p class="bigq">The tools changed. The execution environment changed. The host changed. <em>What didn't change?</em></p>
+      <p class="q-sub">This is exactly the claim made yesterday about why we derive instead of download.</p>
+    </div>
+
+    <div class="block feel-block">
+      <span class="block-tag">🔥 Two live builds</span>
+      <div class="paths">
+        <div class="path-card">
+          <h4>🟪 No-code path — n8n</h4>
+          <div class="path-sub">their execution environment · a frontier host · zero custom glue</div>
+          <div class="flow-chain">
+            <div class="fnode">chat trigger</div><div class="farrow">↓</div>
+            <div class="fnode">AI agent node · tool attached</div><div class="farrow">↓</div>
+            <div class="fnode">HTTP request node → OpenWeatherMap</div><div class="farrow">↓</div>
+            <div class="fnode hi">n8n exposes the workflow as an MCP server</div><div class="farrow">↓</div>
+            <div class="fnode hi">Claude attaches it as a connector — and calls it</div>
+          </div>
+        </div>
+        <div class="path-card">
+          <h4>🟦 Code path — thin server</h4>
+          <div class="path-sub">segment 03 backend · a dozen lines with the python sdk</div>
+          <pre class="code" style="margin:0">@server.list_tools()
+async def list_tools():
+    return [GET_WEATHER_TOOL]   <span class="c"># the same menu</span>
+
+@server.call_tool()
+async def call_tool(name, args):
+    <span class="k">if</span> name == <span class="s">"get_weather"</span>:
+        <span class="k">return</span> fetch_openweathermap(args[<span class="s">"city"</span>])</pre>
+          <div class="flow-chain" style="margin-top:8px">
+            <div class="fnode hi">attach to Claude desktop as a local server</div><div class="farrow">↓</div>
+            <div class="fnode hi">same question → same grounded answer</div>
+          </div>
+        </div>
+      </div>
+      <div class="converge-stage">
+        <button class="btn primary" id="convergeBtn">⤓ Converge them</button>
+        <div class="converged" id="convergedPanel">
+          <div class="layers">
+            <div class="layerbox l1 lit"><span class="lnum">L1</span><span class="lname">Host + LLM</span><span class="layer-pill prob">probabilistic</span><span class="ldesc">decides &amp; speaks — Claude, our chat UI, any host</span></div>
+            <div class="layerbox l2 lit"><span class="lnum">L2</span><span class="lname">Execution environment — now a server speaking the standard</span><span class="layer-pill det">deterministic</span><span class="ldesc">n8n workflow or thin Python server — same uniform</span></div>
+            <div class="layerbox l3 lit"><span class="lnum">L3</span><span class="lname">External world</span><span class="layer-pill world">APIs</span><span class="ldesc">OpenWeatherMap — unchanged since yesterday</span></div>
+          </div>
+          <p style="color:var(--muted);font-size:14px"><strong>Say it while both are on screen:</strong> same three layers, same diagram, two stacks, one grammar. The principles did not change — which is exactly why we derive instead of download.</p>
+        </div>
+      </div>
+      <details class="speaker">
+        <summary>Speaker note — time risk lives here</summary>
+        <div class="note-body">If either demo fights the network, do one path live and narrate the other over the finished diagram; <b>the convergence point is the teaching, not the second demo</b>. Pre-stage both flows working before 6 PM and record a 60-second backup capture of each.</div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 6 · NEW CRACKS
+       ============================================================ -->
+  <section class="slide" data-title="New cracks — honest expectations for v2" data-clock="7:50 – 7:57 IST" data-num="07">
+    <div class="kicker">Segment 07 · 7:50–7:57 · Harvest + table · compress to 4 min if behind</div>
+    <h1>New Cracks — Honest Expectations for v2</h1>
+    <p class="lede">Close the loop on intellectual honesty: v2 solved yesterday's cracks <strong>and opened tomorrow's</strong>. The module keeps advancing by breaking what it just built.</p>
+
+    <div class="block q-block">
+      <span class="block-tag">❓ Ask the room first</span>
+      <p class="bigq">Every fix ships new failure modes. We just fixed v1 — <em>so what did v2 break?</em></p>
+      <p class="q-sub">Harvest from the room before flipping a single card. Each card front is a provocation; the back is the crack, why it exists, and where in the module we solve it.</p>
+    </div>
+
+    <div class="block ex-block">
+      <span class="block-tag">🔧 Exercise — guess, then flip</span>
+      <div class="cards" id="newCracks"></div>
+      <div class="callout" style="margin-top:16px">
+        <span class="co-tag">Assignment framing — same as yesterday</span>
+        <b>Write the new cracks down.</b> Keep the metacognitive habit: the cracks list is how the module steers.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 7 · CLOSE
+       ============================================================ -->
+  <section class="slide" data-title="Close — practice set & the road ahead" data-clock="7:57 – 8:00 IST" data-num="08">
+    <div class="kicker">Segment 08 · 7:57–8:00 · Broadcast · never cut</div>
+    <h1>Close — Practice Set &amp; the Road Ahead</h1>
+    <p class="lede">Four items. Same rule as yesterday: the practice set is tomorrow's agenda.</p>
+
+    <div class="block ex-block">
+      <span class="block-tag">🔧 The practice set</span>
+      <div id="taskList"></div>
+    </div>
+
+    <div class="closing-beat">
+      “Two days ago, a tool call was jargon you were borrowing. Yesterday you derived it. Today you scaled it into a protocol and then found out the world already agreed with you. That is what first principles buys: <span style="color:var(--lime)">you are no longer waiting for the next feature announcement, because you can now predict what it has to be.</span>”
+      <span class="attr">— then the announcement teased yesterday, and dismiss on time.</span>
+    </div>
+
+    <details class="speaker" style="margin-top:20px">
+      <summary>Pre-flight — before 6:00 PM</summary>
+      <div class="note-body">Groq key live and rate limits checked · OpenWeatherMap key valid · n8n flow saved and tested · thin MCP server attached to Claude desktop and answering · both backup captures recorded · whiteboard cleared, L13 three-layer diagram redrawn in the corner as the anchor · announcement post drafted and scheduled.</div>
+    </details>
+  </section>
+
+  <!-- pager injected per slide by JS -->
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
